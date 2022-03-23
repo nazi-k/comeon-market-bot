@@ -16,11 +16,13 @@ from loader import dp
 async def cart_answer(message: types.Message, session: AsyncSession, state: FSMContext):
     await state.finish()
     cart: Cart = await Cart.get_filter_by(session, customer_id=message.chat.id, finish=False)
-    cart_text = await cart.get_cart_text(session)
-    if cart_text:
-        await message.answer(cart_text, reply_markup=make_cart_keyboard(cart))
-    else:
-        await message.answer("Корзина пуста")
+    if cart:
+        cart_text = await cart.get_cart_text(session)
+        if cart_text:
+            await message.answer(cart_text, reply_markup=make_cart_keyboard(cart))
+            return
+
+    await message.answer("Корзина пуста")
 
 
 @dp.callback_query_handler(cb_cart.filter(), state="*")
