@@ -55,11 +55,18 @@ class Product(Base, GetFilterByMixin):
         else:  # TODO стандартне зображення
             return "https://scontent.flwo6-1.fna.fbcdn.net/v/t39.30808-6/266679046_2966535863606892_7419063315773116518_n.jpg?_nc_cat=110&ccb=1-5&_nc_sid=e3f864&_nc_ohc=6ihzWikNgS0AX9LVwTg&_nc_ht=scontent.flwo6-1.fna&oh=00_AT8C03R50kcsiSGk936SPeUsRfEMdpuBV3X42GEbYuXOcA&oe=623C19BA"
 
+    async def get_photo_file_id(self, session: AsyncSession) -> str:
+        photo_file_id_result = await session.execute(
+            select(ProductPhoto.url).where(ProductPhoto.product_id == self.id)
+        )
+        photo_file_id = photo_file_id_result.scalars().first()
+        return photo_file_id
 
 class ProductPhoto(Base):
     __tablename__ = "product_photo"
 
-    url = Column(Text, primary_key=True)
+    file_id = Column(Text, primary_key=True)
+    url = Column(Text, nullable=False)
     product_id = Column(Integer, ForeignKey("product.id", ondelete='CASCADE'), nullable=False)
 
 

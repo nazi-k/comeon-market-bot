@@ -5,9 +5,10 @@ import middlewares, handlers
 
 from data.config import WEBHOOK_URL, WEBHOOK_PATH, WEBAPP_HOST, WEBAPP_PORT
 
-
+'''
 async def on_startup(dispatcher):
     # Устанавливаем дефолтные команды
+    await set_default_commands(dispatcher)
 
     await dp.bot.set_webhook(WEBHOOK_URL, drop_pending_updates=True)
 
@@ -21,3 +22,7 @@ if __name__ == '__main__':
         host=WEBAPP_HOST,
         port=WEBAPP_PORT,
     )
+'''
+from aiogram import executor
+if __name__ == '__main__':
+    executor.start_polling(dp)
