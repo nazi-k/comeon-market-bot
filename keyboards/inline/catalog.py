@@ -8,7 +8,7 @@ from cbdata.cart import cb_cart
 
 from db.models import ProductFolder, Product, Cart, CartProduct
 
-from .utils import get_counter_buttons
+from .utils import make_counter_buttons
 
 
 async def make_catalog_keyboard(product_folder: ProductFolder, session: AsyncSession) -> InlineKeyboardMarkup:
@@ -26,7 +26,7 @@ async def make_catalog_keyboard(product_folder: ProductFolder, session: AsyncSes
         ))
     keyboard.add(*buttons)
     if product_folder.parent_id:
-        keyboard.add(_get_back_button(product_folder.parent_id))
+        keyboard.add(_make_back_button(product_folder.parent_id))
 
     return keyboard
 
@@ -41,8 +41,8 @@ async def make_product_keyboard(product: Product, cart: Cart, session: AsyncSess
         text=product_button_text,
         callback_data=cb_buy_product.new(product_id=product.id, cart_id=cart.id)
     ))
-    keyboard.add(await _get_cart_button(cart, session))
-    keyboard.add(_get_back_button(product.product_folder_id))
+    keyboard.add(await _make_cart_button(cart, session))
+    keyboard.add(_make_back_button(product.product_folder_id))
 
     return keyboard
 
@@ -50,21 +50,21 @@ async def make_product_keyboard(product: Product, cart: Cart, session: AsyncSess
 async def make_buy_product_keyboard(cart: Cart, product: Product, cart_product: CartProduct, session: AsyncSession) \
         -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardMarkup(row_width=3)
-    keyboard.add(*get_counter_buttons(cb_buy_change_product_quantity, cart_product))
-    keyboard.add(await _get_cart_button(cart, session))
-    keyboard.add(_get_back_button(product.product_folder_id))
+    keyboard.add(*make_counter_buttons(cb_buy_change_product_quantity, cart_product))
+    keyboard.add(await _make_cart_button(cart, session))
+    keyboard.add(_make_back_button(product.product_folder_id))
 
     return keyboard
 
 
-async def _get_cart_button(cart: Cart, session: AsyncSession) -> InlineKeyboardButton:
+async def _make_cart_button(cart: Cart, session: AsyncSession) -> InlineKeyboardButton:
     return InlineKeyboardButton(
-        text=f"🛍️ {await cart.get_sum(session)}₴",
+        text=f"🛍️ {await cart.get_amount(session)}₴",
         callback_data=cb_cart.new()
     )
 
 
-def _get_back_button(product_folder_id: int) -> InlineKeyboardButton:
+def _make_back_button(product_folder_id: int) -> InlineKeyboardButton:
     return InlineKeyboardButton(
         text="↩Назад",
         callback_data=cb_product_folder.new(id=product_folder_id)

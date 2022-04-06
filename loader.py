@@ -19,7 +19,7 @@ dp = Dispatcher(bot, storage=storage)
 engine = create_async_engine(
     make_connection_string(),
     future=True,
-    echo=True
+    echo=False
 )
 
 # Creating DB connections pool

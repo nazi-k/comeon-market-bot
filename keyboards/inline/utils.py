@@ -3,7 +3,7 @@ from aiogram.utils.callback_data import CallbackData
 from db.models import CartProduct
 
 
-def get_counter_buttons(callback_data_obj: CallbackData, cart_product: CartProduct) -> list[InlineKeyboardButton]:
+def make_counter_buttons(callback_data_obj: CallbackData, cart_product: CartProduct) -> list[InlineKeyboardButton]:
     return [
         InlineKeyboardButton(
             text="➖",

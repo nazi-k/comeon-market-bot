@@ -30,12 +30,6 @@ class GetOrCreateMixin(GetFilterByMixin):
             return instance
 
 
-class Customer(Base, GetOrCreateMixin):
-    __tablename__ = "customer"
-
-    telegram_id = Column(BigInteger, primary_key=True)
-
-
 class Product(Base, GetFilterByMixin):
     __tablename__ = "product"
 
@@ -60,7 +54,11 @@ class Product(Base, GetFilterByMixin):
             select(ProductPhoto.url).where(ProductPhoto.product_id == self.id)
         )
         photo_file_id = photo_file_id_result.scalars().first()
-        return photo_file_id
+        if photo_file_id:
+            return photo_file_id
+        else:  # TODO стандартне зображення
+            return "AgACAgIAAxkDAAIGYGJJVKGYIxQ5p_8gVqkf7iRj3unQAALiujEbE90pSjjU3biiWEE4AQADAgADcwADIwQ"
+
 
 class ProductPhoto(Base):
     __tablename__ = "product_photo"
@@ -79,7 +77,7 @@ class ProductFolder(Base, GetFilterByMixin):
 
     async def get_children(self, session: AsyncSession) -> list:
         children_result = await session.execute(
-            select(self.__class__).where(ProductFolder.parent_id == self.id)
+            select(self.__class__).where(self.__class__.parent_id == self.id)
         )
         return children_result.scalars().all()
 
@@ -117,6 +115,23 @@ class CartProduct(Base, GetFilterByMixin):
         return products_result.scalars().first()
 
 
+class DataToSend(Base, GetFilterByMixin):
+    __tablename__ = "data_to_send"
+
+    cart_id = Column(Integer, ForeignKey("cart.id"), primary_key=True)
+    city = Column(Text, nullable=False)
+    mail_number = Column(Text, nullable=False)
+    full_name = Column(Text, nullable=False)
+    phone_number = Column(Text, nullable=False)
+
+    def get_text(self, whith_phone: bool = True) -> str:
+        data_to_send_text = f"Город доставки: {self.city}\n" \
+                            f"Отделение Новой Почты: {self.mail_number}\n" \
+                            f"Получатель: {self.full_name}" \
+
+        return data_to_send_text + f"\n\nКонтакт: {self.phone_number}" if whith_phone else data_to_send_text
+
+
 class Cart(Base, GetOrCreateMixin):
     __tablename__ = "cart"
 
@@ -136,32 +151,38 @@ class Cart(Base, GetOrCreateMixin):
         else:
             return 0
 
-    async def get_sum(self, session: AsyncSession) -> int:
-        sum_query = f"select coalesce(SUM(cp.quantity * p.price), 0) AS product_sum " \
-                    f"from cart_product cp left join product p on p.id = cp.product_id WHERE cp.cart_id = {self.id}"
-        return next(await session.execute(text(sum_query)))[0]
+    async def get_amount(self, session: AsyncSession) -> int:
+        amount_query = f"select coalesce(SUM(cp.quantity * p.price), 0) AS product_sum " \
+                       f"from cart_product cp left join product p on p.id = cp.product_id WHERE cp.cart_id = {self.id}"
+        return next(await session.execute(text(amount_query)))[0]
 
     async def add_product(self, session: AsyncSession, product: Product) -> CartProduct:
         cart_product: CartProduct = await CartProduct.get_filter_by(session, cart_id=self.id, product_id=product.id)
         if cart_product:
-            cart_product.quantity += 1
+            await cart_product.change_quantity(session, +1)
         else:
             cart_product = CartProduct.__call__(cart_id=self.id, product_id=product.id, quantity=1)
             session.add(cart_product)
-        await session.commit()
+            await session.commit()
 
         return cart_product
+
+    async def sub_product(self, session: AsyncSession, product: Product) -> Optional[CartProduct]:
+        cart_product: CartProduct = await CartProduct.get_filter_by(session, cart_id=self.id, product_id=product.id)
+        if cart_product:
+            await cart_product.change_quantity(session, -1)
+            return cart_product
 
     async def get_cart_text(self, session: AsyncSession) -> Optional[str]:
         query = f"select p.name, cp.quantity, p.price from cart_product cp " \
                 f"left join product p on p.id = cp.product_id WHERE cp.cart_id = {self.id}"
         cart_text = ""
-        sum = 0
+        amount = 0
         for name, quantity, price in await session.execute(text(query)):
-            sum += quantity * price
+            amount += quantity * price
             cart_text += f"\n{name}\n{quantity} шт. x {price}₴"
         if cart_text:
-            cart_text = "Корзина\n\n-----" + cart_text + f"\n-----\n\nИтого: {sum}₴"
+            cart_text = "Корзина\n\n-----" + cart_text + f"\n-----\n\nИтого: {amount}₴"
             return cart_text
         else:
             return None
@@ -172,3 +193,35 @@ class Cart(Base, GetOrCreateMixin):
         )
         cart_products = sorted_cart_products_result.scalars().all()
         return cart_products
+
+    async def get_data_to_send(self, session: AsyncSession) -> Optional[DataToSend]:
+        data_to_send_result = await session.execute(
+            select(DataToSend).where(DataToSend.cart_id == self.id)
+        )
+        data_to_send = data_to_send_result.scalars().first()
+        return data_to_send
+
+    async def set_copy(self, session: AsyncSession, cart: 'Cart') -> None:
+        old_cart_products = await self.get_sorted_cart_products(session)
+        for old_cart_product in old_cart_products:
+            await session.delete(old_cart_product)
+        copy_cart_products = await cart.get_sorted_cart_products(session)
+        new_cart_products = []
+        for copy_cart_product in copy_cart_products:
+            copy_cart_product.cart_id = self.id
+            new_cart_products.append(copy_cart_product)
+        session.add_all(new_cart_products)
+        await session.commit()
+
+
+class Customer(Base, GetOrCreateMixin):
+    __tablename__ = "customer"
+
+    telegram_id = Column(BigInteger, primary_key=True)
+
+    async def get_finished_carts(self, session: AsyncSession) -> list[Optional[Cart]]:
+        finished_carts_result = await session.execute(
+            select(Cart).where(Cart.customer_id == self.telegram_id)
+        )
+        finished_carts = finished_carts_result.scalars().all()
+        return finished_carts

@@ -5,10 +5,12 @@ from aiogram.utils.markdown import hide_link
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from keyboards.inline import make_catalog_keyboard, make_product_keyboard, make_buy_product_keyboard
+from keyboards.inline.catalog import make_catalog_keyboard, make_product_keyboard, make_buy_product_keyboard
 from db.models import ProductFolder, Product, Cart, CartProduct
 
 from cbdata.catalog import *
+
+from .utils import change_product_quantity
 
 from loader import dp
 
@@ -50,18 +52,9 @@ async def catalog_buy_product(call: types.CallbackQuery, callback_data: dict, se
 
 @dp.callback_query_handler(cb_buy_change_product_quantity.filter(), state="*")
 async def catalog_change_product_quantity(call: types.CallbackQuery, callback_data: dict, session: AsyncSession):
-    cart: Cart = await Cart.get_filter_by(session, id=int(callback_data['cart_id']))
-    if cart.finish:
-        await call.answer("Этот заказ уже оформлен, начните оформлять новый")
-    else:
-        product: Product = await Product.get_filter_by(session, id=int(callback_data['product_id']))
-        cart_product: CartProduct = await CartProduct.get_filter_by(session, cart_id=cart.id, product_id=product.id)
-        if callback_data['add_or_sub'] == 'add':
-            await cart_product.change_quantity(session, change_on=+1)
-        elif callback_data['add_or_sub'] == 'sub':
-            await cart_product.change_quantity(session, change_on=-1)
-        else:
-            raise ValueError("Очікую 'add' або 'sub'")
+    result = await change_product_quantity(call, callback_data, session)
+    if result:
+        cart, product, cart_product = result
         await call.message.edit_reply_markup(
             reply_markup=await make_buy_product_keyboard(cart, product, cart_product, session)
         )
