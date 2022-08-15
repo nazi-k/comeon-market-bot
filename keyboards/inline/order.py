@@ -9,7 +9,7 @@ def make_finished_order_keyboard(carts: list[Cart]) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardMarkup(row_width=2)
     buttons = [
         InlineKeyboardButton(
-            text=f"{cart.data}-{cart.id}",
+            text=f"{cart.date}-{cart.id}",
             callback_data=cb_finished_order.new(cart_id=cart.id)
         )
         for cart in carts

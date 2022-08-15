@@ -137,7 +137,7 @@ class Order(Base, GetFilterByMixin):
         for cart_product in cart_products:
             product = await Product.get_filter_by(session, id=cart_product.product_id)
             product.buy(cart_product.quantity)
-        cart.data = date.today()
+        cart.date = date.today()
         cart.finish = True
         return True
 
@@ -146,7 +146,7 @@ class Cart(Base, GetOrCreateMixin):
     __tablename__ = "cart"
 
     id = Column(Integer, primary_key=True)
-    data = Column(Date, nullable=False, server_default=func.now())
+    date = Column(Date, nullable=False, server_default=func.now())
     customer_id = Column(BigInteger, ForeignKey("customer.telegram_id"), nullable=False)
     finish = Column(Boolean, nullable=False, server_default=text("False"))
 

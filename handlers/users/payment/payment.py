@@ -61,7 +61,7 @@ async def got_payment(message: types.Message, session: AsyncSession):
 
     await notify_admin(cart, order, await message.chat.get_url(), message.bot, session)
 
-    await sheet.row_record(order, session)
+    await sheet.row_record(order, cart.date, session)
 
 
 async def notify_admin(cart: Cart, order: Order, chat_url: str, bot: Bot, session: AsyncSession):

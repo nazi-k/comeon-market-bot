@@ -1,13 +1,16 @@
 from aiogram.utils.executor import start_webhook
 
-from loader import dp
+from db.base import metadata
+from loader import dp, engine
 import middlewares, handlers
 
 from data.config import WEBHOOK_URL, WEBHOOK_PATH, WEBAPP_HOST, WEBAPP_PORT
 
 
 async def on_startup(dispatcher):
-    # Устанавливаем дефолтные команды
+    # Перевіряє структуру бд
+    async with engine.begin() as conn:
+        await conn.run_sync(metadata.create_all)
 
     await dp.bot.set_webhook(WEBHOOK_URL, drop_pending_updates=True)
 

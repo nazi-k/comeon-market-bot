@@ -1,2 +1,2 @@
-from .GetOrCreateMixin import GetOrCreateMixin
-from .GetFilterByMixin import GetFilterByMixin
+from .get_or_create_mixin import GetOrCreateMixin
+from .get_filter_by_mixin import GetFilterByMixin

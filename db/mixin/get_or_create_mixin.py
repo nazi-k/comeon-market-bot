@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.mixin import GetFilterByMixin
+from .get_filter_by_mixin import GetFilterByMixin
 
 
 class GetOrCreateMixin(GetFilterByMixin):
