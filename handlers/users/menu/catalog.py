@@ -5,6 +5,7 @@ from aiogram.utils.markdown import hide_link
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from exception import NotEnoughQuantity
 from keyboards.inline.catalog import make_catalog_keyboard, make_product_keyboard, make_buy_product_keyboard
 from db.models import ProductFolder, Product, Cart, CartProduct
 
@@ -52,7 +53,11 @@ async def catalog_buy_product(call: types.CallbackQuery, callback_data: dict, se
 
 @dp.callback_query_handler(cb_buy_change_product_quantity.filter(), state="*")
 async def catalog_change_product_quantity(call: types.CallbackQuery, callback_data: dict, session: AsyncSession):
-    result = await change_product_quantity(call, callback_data, session)
+    try:
+        result = await change_product_quantity(call, callback_data, session)
+    except NotEnoughQuantity:
+        await call.answer("Легше... В нас більше немає!", show_alert=True)
+        return
     if result:
         cart, product, cart_product = result
         await call.message.edit_reply_markup(

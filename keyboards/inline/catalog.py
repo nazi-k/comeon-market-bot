@@ -33,7 +33,7 @@ async def make_catalog_keyboard(product_folder: ProductFolder, session: AsyncSes
 
 async def make_product_keyboard(product: Product, cart: Cart, session: AsyncSession) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardMarkup(row_width=1)
-    product_button_text = f"{product.price}₴ Купить {product.name}"
+    product_button_text = f"{product.price}₴ Купити {product.name}"
     quantity_product_in_cart = await cart.get_quantity_product_in_cart(product, session)
     if quantity_product_in_cart:
         product_button_text = f"{quantity_product_in_cart} шт. | " + product_button_text

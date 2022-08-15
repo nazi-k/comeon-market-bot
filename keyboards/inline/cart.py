@@ -11,15 +11,15 @@ def make_cart_keyboard(cart: Cart) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardMarkup(row_width=2)
     buttons = [
         InlineKeyboardButton(
-            text="✏️Редактировать",
+            text="✏️Редагувати",
             callback_data=cb_edit_cart.new(cart_id=cart.id, enter_index_product_in_cart=0)
         ),
         InlineKeyboardButton(
-            text="❌ Очистить",
+            text="❌ Очистити",
             callback_data=cb_clear_cart.new(id=cart.id)
         ),
         InlineKeyboardButton(
-            text="✅ Оформить заказ",
+            text="✅ Оформити замовлення",
             callback_data=cb_create_order.new(cart_id=cart.id)
         )
     ]
@@ -28,8 +28,9 @@ def make_cart_keyboard(cart: Cart) -> InlineKeyboardMarkup:
     return keyboard
 
 
-def make_edit_cart_menu_keyboard(cart_products: list[CartProduct], enter_index_product_in_cart: int) \
-        -> InlineKeyboardMarkup:
+def make_edit_cart_menu_keyboard(cart_products: list[CartProduct],
+                                 enter_index_product_in_cart: int,
+                                 old_cart_message_id: str) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardMarkup(row_width=3)
     keyboard.add(*make_edit_cart_counter_buttons(cart_products[enter_index_product_in_cart]))
     if len(cart_products) > 1:
@@ -42,7 +43,7 @@ def make_edit_cart_menu_keyboard(cart_products: list[CartProduct], enter_index_p
             ),
             InlineKeyboardButton(
                 text=f"{enter_index_product_in_cart + 1}/{len(cart_products)}",
-                callback_data="TODO"
+                callback_data="this/all"
             ),
             InlineKeyboardButton(
                 text="➡️",
@@ -54,26 +55,12 @@ def make_edit_cart_menu_keyboard(cart_products: list[CartProduct], enter_index_p
         keyboard.add(*buttons)
     keyboard.add(
         InlineKeyboardButton(
-            text="✅ Завершить редактирование",
-            callback_data=cb_end_edit_cart.new()
+            text="✅ Завершити редагування",
+            callback_data=cb_end_edit_cart.new(old_cart_message_id=old_cart_message_id,
+                                               cart_id=cart_products[enter_index_product_in_cart].cart_id)
         )
     )
 
-    return keyboard
-
-
-def make_confirm_order_keyboard(cart_id: int) -> InlineKeyboardMarkup:
-    keyboard = InlineKeyboardMarkup(row_width=2)
-    keyboard.add(
-        InlineKeyboardButton(
-            text="Да",
-            callback_data=cb_confirm_order.new(cart_id=cart_id)
-        ),
-        InlineKeyboardButton(
-            text="Нет, отмена",
-            callback_data=cb_cancel_order.new()
-        )
-    )
     return keyboard
 
 

@@ -23,7 +23,7 @@ def make_copy_cart_keyboard(cart: Cart) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardMarkup(row_width=1)
     keyboard.add(
         InlineKeyboardButton(
-            text="Скопировать корзину",
+            text="Копіювати кошик",
             callback_data=cb_copy_cart.new(cart_id=cart.id)
         )
     )

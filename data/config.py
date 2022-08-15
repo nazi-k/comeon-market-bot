@@ -21,3 +21,12 @@ WEBHOOK_URL = f'{WEBHOOK_HOST}{WEBHOOK_PATH}'
 # webserver settings
 WEBAPP_HOST = env.str("ip")
 WEBAPP_PORT = int(os.environ.get('PORT', 5000))
+
+# telegram payment
+PROVIDER_TOKEN = env.str("provider_token")
+
+DEFAULT_PRODUCT_PHOTO_FILE_ID = env.str("default_product_photo_file_id")
+DEFAULT_PRODUCT_PHOTO_URL = env.str("default_product_photo_url")
+
+CREDENTIALS_FILE = os.path.join(*env.list("credentials_file"))
+SPREADSHEET_ID = env.str("spreadsheet_id")

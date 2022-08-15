@@ -10,7 +10,7 @@ async def change_product_quantity(call: CallbackQuery, callback_data: dict, sess
         -> Optional[tuple[Cart, Product, CartProduct]]:
     cart: Cart = await Cart.get_filter_by(session, id=int(callback_data['cart_id']))
     if not cart or cart.finish:
-        await call.answer("Эта кнопка уже не работает. Попробуйте что-то другое.")
+        await call.answer("Ця кнопка вже не працює. Спробуйте щось інше.")
     else:
         product: Product = await Product.get_filter_by(session, id=int(callback_data['product_id']))
         if callback_data['add_or_sub'] == 'add':

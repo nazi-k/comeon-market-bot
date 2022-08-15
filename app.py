@@ -5,7 +5,6 @@ import middlewares, handlers
 
 from data.config import WEBHOOK_URL, WEBHOOK_PATH, WEBAPP_HOST, WEBAPP_PORT
 
-
 async def on_startup(dispatcher):
     # Устанавливаем дефолтные команды
 
