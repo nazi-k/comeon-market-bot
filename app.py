@@ -5,6 +5,7 @@ import middlewares, handlers
 
 from data.config import WEBHOOK_URL, WEBHOOK_PATH, WEBAPP_HOST, WEBAPP_PORT
 
+
 async def on_startup(dispatcher):
     # Устанавливаем дефолтные команды
 
@@ -20,5 +21,3 @@ if __name__ == '__main__':
         host=WEBAPP_HOST,
         port=WEBAPP_PORT,
     )
-
-

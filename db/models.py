@@ -5,37 +5,16 @@ from aiogram.types import LabeledPrice
 from sqlalchemy import Column, ForeignKey, BigInteger, Text, Integer, Date, Boolean, SmallInteger, text
 from sqlalchemy.sql import func
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
+from sqlalchemy import select
 
 from db.base import Base
 
 from data.config import PROVIDER_TOKEN, DEFAULT_PRODUCT_PHOTO_FILE_ID, DEFAULT_PRODUCT_PHOTO_URL
+from db.mixin import GetFilterByMixin, GetOrCreateMixin
 
 from exception import NotEnoughQuantity, InvoicePayloadToLong
 
 MAX_LEN_DESCRIPTION: int = 255
-
-
-class GetFilterByMixin:
-    @classmethod
-    async def get_filter_by(cls, session: AsyncSession, **kwargs):
-        instance_result = await session.execute(
-            select(cls).where(and_(*(getattr(cls, column_name) == kwargs[column_name] for column_name in kwargs)))
-        )
-        return instance_result.scalars().first()
-
-
-class GetOrCreateMixin(GetFilterByMixin):
-    @classmethod
-    async def get_or_create(cls, session: AsyncSession, **kwargs):
-        instance = await cls.get_filter_by(session, **kwargs)
-        if instance:
-            return instance
-        else:
-            instance = cls.__call__(**kwargs)
-            session.add(instance)
-            await session.commit()
-            return instance
 
 
 class Product(Base, GetFilterByMixin):
