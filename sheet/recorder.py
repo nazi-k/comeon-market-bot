@@ -19,8 +19,8 @@ service = apiclient.discovery.build('sheets', 'v4', http=httpAuth)
 
 
 async def row_record(order: Order, date: date, session: AsyncSession):
-    query = f"select p.name, cp.quantity from 'cart_product' cp " \
-            f"left join 'product' p on p.id = cp.product_id WHERE cp.cart_id = {order.cart_id}"
+    query = f"select p.name, cp.quantity from cart_product cp " \
+            f"left join product p on p.id = cp.product_id WHERE cp.cart_id = {order.cart_id}"
     values_article = ''
     values_quantity = ''
     for name, quantity in await session.execute(text(query)):
