@@ -20,7 +20,7 @@ from loader import dp
 async def catalog(message: types.Message, session: AsyncSession, state: FSMContext):
     await state.finish()
     root_product_folder: ProductFolder = await ProductFolder.get_root_product_folder(session)
-    await message.answer(root_product_folder.name,  # "Смотри, что у нас есть :)"
+    await message.answer(root_product_folder.name,  # "Дивись що в нас є :)"
                          reply_markup=await make_catalog_keyboard(
                              root_product_folder, session)
                          )
@@ -45,10 +45,13 @@ async def catalog_product(call: types.CallbackQuery, callback_data: dict, sessio
 async def catalog_buy_product(call: types.CallbackQuery, callback_data: dict, session: AsyncSession):
     product: Product = await Product.get_filter_by(session, id=int(callback_data['product_id']))
     cart: Cart = await Cart.get_or_create(session, customer_id=int(call.message.chat.id), finish=False)
-    cart_product: CartProduct = await cart.add_product(session, product)
-    await call.message.edit_text(text=product.name + hide_link(await product.get_url_photo(session)),
-                                 reply_markup=await make_buy_product_keyboard(cart, product, cart_product, session)
-                                 )
+    try:
+        cart_product: CartProduct = await cart.add_product(session, product)
+        await call.message.edit_text(text=product.name + hide_link(await product.get_url_photo(session)),
+                                     reply_markup=await make_buy_product_keyboard(cart, product, cart_product, session)
+                                     )
+    except NotEnoughQuantity:
+        await call.answer("Легше... В нас більше немає!", show_alert=True)
 
 
 @dp.callback_query_handler(cb_buy_change_product_quantity.filter(), state="*")

@@ -64,5 +64,20 @@ def make_edit_cart_menu_keyboard(cart_products: list[CartProduct],
     return keyboard
 
 
+def make_confirm_order_keyboard(cart_id: int) -> InlineKeyboardMarkup:
+    keyboard = InlineKeyboardMarkup(row_width=2)
+    keyboard.add(
+        InlineKeyboardButton(
+            text="Так",
+            callback_data=cb_confirm_order.new(cart_id=cart_id)
+        ),
+        InlineKeyboardButton(
+            text="Ні, відмінити",
+            callback_data=cb_cancel_order.new()
+        )
+    )
+    return keyboard
+
+
 def make_edit_cart_counter_buttons(cart_product: CartProduct) -> list[InlineKeyboardButton]:
     return make_counter_buttons(cb_edit_cart_change_product_quantity, cart_product)

@@ -8,7 +8,7 @@ from loader import dp
 from cbdata.contacts import cd_social_networks
 
 
-@dp.message_handler(Text(equals="📱 Контакти"), state="*")
+@dp.message_handler(Text(equals="🤙 Менеджер"), state="*")
 async def contacts(message: types.Message, state: FSMContext):
     await state.finish()
     await message.answer(

@@ -4,16 +4,16 @@ from aiogram.dispatcher import FSMContext
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from keyboards.inline.cart import make_cart_keyboard
 from keyboards.inline.order import make_finished_order_keyboard, make_copy_cart_keyboard
 from db.models import Cart, Customer, Order
 
 from cbdata.order import *
-from keyboards.inline.payment import make_payment_keyboard
 
 from loader import dp
 
 
-@dp.message_handler(Text(equals="📜 Замовлення"), state="*")
+@dp.message_handler(Text(equals="📜 Мої замовлення"), state="*")
 async def order_answer(message: types.Message, session: AsyncSession, state: FSMContext):
     await state.finish()
     carts = await Customer(telegram_id=message.chat.id).get_finished_carts(session)
@@ -38,12 +38,4 @@ async def copy_cart(call: types.CallbackQuery, callback_data: dict, session: Asy
     cart: Cart = await Cart.get_or_create(session, customer_id=call.message.chat.id, finish=False)
     cart_who_copy = await Cart.get_filter_by(session, id=int(callback_data["cart_id"]))
     await cart.set_copy(session, cart_who_copy)
-    order: Order = await Order.get_filter_by(session, cart_id=cart_who_copy.id)
-    data_to_invoice = await cart.get_data_to_invoice(region=order.region,
-                                                     city=order.city,
-                                                     nova_poshta_number=order.nova_poshta_number,
-                                                     session=session)
-    await call.message.bot.send_invoice(chat_id=call.message.chat.id,
-                                        reply_markup=make_payment_keyboard(cart_id=order.cart_id,
-                                                                           cart_amount=int(order.total_amount / 100)),
-                                        **data_to_invoice)
+    await call.message.answer(await cart.get_cart_text(session), reply_markup=make_cart_keyboard(cart))

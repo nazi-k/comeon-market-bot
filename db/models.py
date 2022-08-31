@@ -1,7 +1,6 @@
 from datetime import date
 from typing import Optional
 
-from aiogram.types import LabeledPrice
 from sqlalchemy import Column, ForeignKey, BigInteger, Text, Integer, Date, Boolean, SmallInteger, text
 from sqlalchemy.sql import func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,12 +8,10 @@ from sqlalchemy import select
 
 from db.base import Base
 
-from data.config import PROVIDER_TOKEN, DEFAULT_PRODUCT_PHOTO_FILE_ID, DEFAULT_PRODUCT_PHOTO_URL
+from data.config import DEFAULT_PRODUCT_PHOTO_FILE_ID, DEFAULT_PRODUCT_PHOTO_URL
 from db.mixin import GetFilterByMixin, GetOrCreateMixin
 
-from exception import NotEnoughQuantity, InvoicePayloadToLong
-
-MAX_LEN_DESCRIPTION: int = 255
+from exception import NotEnoughQuantity
 
 
 class Product(Base, GetFilterByMixin):
@@ -117,29 +114,12 @@ class Order(Base, GetFilterByMixin):
     full_name = Column(Text, nullable=False)
     phone_number = Column(Text, nullable=False)
     total_amount = Column(Integer, nullable=False)
-    raw_payload = Column(Text, nullable=False)
-    telegram_payment_charge_id = Column(Text, nullable=True)
-    provider_payment_charge_id = Column(Text, nullable=True)
 
     def get_data_to_send_text(self) -> str:
         data_to_send_text = f"Область: {self.region}\n" \
                             f"Місто: {self.city}\n" \
                             f"Відділення Нової Пошти: {self.nova_poshta_number}\n"
         return data_to_send_text
-
-    async def payment(self, session: AsyncSession) -> bool:
-        cart: Cart = await Cart.get_filter_by(session, id=self.cart_id, finish=False)
-        if not cart:
-            return False
-        if self.total_amount != (await cart.get_amount(session) * 100):
-            return False
-        cart_products = await cart.get_sorted_cart_products(session)
-        for cart_product in cart_products:
-            product = await Product.get_filter_by(session, id=cart_product.product_id)
-            product.buy(cart_product.quantity)
-        cart.date = date.today()
-        cart.finish = True
-        return True
 
 
 class Cart(Base, GetOrCreateMixin):
@@ -220,50 +200,14 @@ class Cart(Base, GetOrCreateMixin):
                                             quantity=copy_cart_product.quantity))
         await session.commit()
 
-    async def get_data_to_invoice(self,
-                                  region: str,
-                                  city: str,
-                                  nova_poshta_number: str,
-                                  session: AsyncSession, **kwargs) -> dict:
+    async def confirmation_buy(self, session: AsyncSession) -> bool:
         cart_products = await self.get_sorted_cart_products(session)
-        prices = []
-        product_name_and_quantity = []
         for cart_product in cart_products:
-            product = await cart_product.get_product(session)
-            prices.append(
-                LabeledPrice(label=f"{product.name} "
-                                   f"{' x ' + str(cart_product.quantity) if cart_product.quantity > 1 else ''}",
-                             amount=(cart_product.quantity * product.price) * 100)
-            )
-            product_name_and_quantity.append(
-                product.name + ' x ' + str(cart_product.quantity) if cart_product.quantity > 1 else product.name
-            )
-        description = ', '.join(product_name_and_quantity)
-        if len(description) > MAX_LEN_DESCRIPTION:
-            description = description[:(MAX_LEN_DESCRIPTION - 3)] + '...'
-        payload = f"{self.id}:" \
-                  f"{region.replace(':', '{..}')}:" \
-                  f"{city.replace(':', '{..}')}:" \
-                  f"{nova_poshta_number.replace(':', '{..}')}"
-        if len(payload.encode('utf-8')) > 128:
-            raise InvoicePayloadToLong
-        data_to_invoice = {
-            "title": f"Замовлення #{self.id}",
-            "description": description,
-            "payload": payload,
-            "provider_token": PROVIDER_TOKEN,
-            "currency": "uah",
-            "prices": prices,
-            "need_name": True,
-            "need_phone_number": True,
-            "send_phone_number_to_provider": True
-        }
-        if len(cart_products) == 1:
-            product = await cart_products[0].get_product(session)
-            data_to_invoice["photo_url"] = await product.get_url_photo(session)
-        else:
-            data_to_invoice["photo_url"] = DEFAULT_PRODUCT_PHOTO_URL
-        return data_to_invoice
+            product = await Product.get_filter_by(session, id=cart_product.product_id)
+            product.buy(cart_product.quantity)
+        self.date = date.today()
+        self.finish = True
+        return True
 
 
 class Customer(Base, GetOrCreateMixin):
