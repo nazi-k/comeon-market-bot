@@ -1,0 +1,12 @@
+{
+  "type": "service_account",
+  "project_id": "garikoff-shop",
+  "private_key_id": "11f50aea7e2333167f5c8f8f0e64159a8f9c66a9",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDIbLT6bojXB/9H\nItBMq8BZKEW8FBsRos6A1GWfy5Ibvu2qjVe/AU0gblCDJqnkr9ajUXZidI0DFkU3\nM08GEiODeC0BTySbPVhx9CJzXDZ6wJjJhzM/7gKBc5iVc3oRZ5S9jbSRnLMR3edW\ns0aJXbGqchGk4OYK2I2Ch5xDvCXGf0FZi1cpaOZZNzTXr0CucTZ3JQfhoRab4rBv\nYgVOGROvUsfakSsPthVRViXKY6Wq2G7GlMqGBMEXVkBFEnZzflP5pQytAwuRtVI/\nzuWVPT+tbv7teMN/yeGxmOMGg6M0MLUO9dwib17nWYsll556tlnF2Rb83dyHiY4e\nxonkKSfXAgMBAAECggEACVSePEZnEnOp27rwLZGVW9E3JeFdvT1yFadNr9m/TJFf\n6R+5ZQf/ejIIh4KGSEIzYNkLBNxeMDWaNU6rMCIqCxXOKpBvqNZ7RprR+8LgOmi6\n9C7aIPDIpxQll1eP6D2FPCnbrSe5YmyNN4kTEJQPEFtNHPrnWrvoIpqDmNeqfooa\n7jkn/TGZbOCTVfg6aYHmbUvfkGmleFEP87IZy1Fiij8reVkGm6+LKQhvdgBjMIS7\nbEyir29BPFsbTrCxhnJFwnVfbuCpKd99mbZyM/Qk5ZehCHim6cqkJUt3OUhc2Rel\nhipis1Tiey1VgzwVz3Ha+ZrtrOnlacbQDjsIRT7fSQKBgQD01EURf6VMAOKK1q20\ncgvAJ2kK5qeW9XkdmU5jwA3pEW/ARLM4TSZjgaeoxoSdq3fyyP0PBYutpA8G0FMU\nw6uw7oMXgVto/1p5mw9AxL9NM4Zonn5gn8ven7cNC8JYgMSL32BtQ84PlIQn3Ntr\nH+1MIJrPw09sFqdqORB6Y4b8zQKBgQDRkcT0KQBiK9wn5wgPfQ/3bX7/5KNAjh5e\n1ZGeP1LrNsoh+QDF+li/m4aB2FYUQYCKq/JE73ygssRbn4pAHMA+di/Puh7yfX22\nOYL8dq61qnJPUJlGDsQJnrXotjzgL0+/pZB+aomp8BcyZw8uRpeDVAeMICsmYOwO\nKWqri8f3MwKBgBAbx0+XbnDJvh4Ucelld5B1B1xIQM6V6BoidB3sDP5Av3GPE5uo\nt9XkOfvI1ADrv0CiKMRMQRxzpulz24OKPEmv58AsKq+F3ZYStbY1O8EAmt9XTkld\nOjSznX+mPmtETapGUDngNDaiNu/IgEdUGnDf1E/HMfqSowFCL+tdkQwhAoGBALYb\nek9E1c15GX0fGHUFEvvKDWLl1irBlIiKA1jE5BP671joHJDtA3O0/QQV7m75oG5g\nDk1y4hRuY4zOrP8bPL7KSq+ypzPGcpgHj9g8dYLtUxmzCw3CxP0rCh3nRiz1T9JU\nV6RShb/DHxUwUxO+SejX+xr71SMrc9S2jrf05lXbAoGADL88p6Ad9e7RPVRPMGbb\nCkTzXJSm2jivRzyj4RZprokSF4l8nU3yO9uErYyCtX6poIDtWHAdwoExKxRfM2FQ\n4DkVdXfT0U2iDrp7JWjfCM2R95fskISqCa77v+OsabNK9cHfWX59Ya0BPAaJ5xXH\nLX4JWDZDVPO5VDN62Fng5zQ=\n-----END PRIVATE KEY-----\n",
+  "client_email": "orders@garikoff-shop.iam.gserviceaccount.com",
+  "client_id": "108038313082849538368",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/orders%40garikoff-shop.iam.gserviceaccount.com"
+}
