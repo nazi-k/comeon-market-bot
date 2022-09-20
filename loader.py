@@ -1,5 +1,3 @@
-import ssl
-
 from aiogram import Bot, Dispatcher, types
 from aiogram.contrib.fsm_storage.redis import RedisStorage2
 
@@ -18,16 +16,11 @@ storage = RedisStorage2(host=config.REDIS_HOST, port=config.REDIS_PORT, password
 dp = Dispatcher(bot, storage=storage)
 
 
-ssl_object = ssl.create_default_context()
-ssl_object.check_hostname = False
-ssl_object.verify_mode = ssl.CERT_NONE
-
 # Creating DB engine for PostgreSQL
 engine = create_async_engine(
     make_connection_string(),
     future=True,
-    echo=False,
-    ssl=ssl_object
+    echo=False
 )
 
 # Creating DB connections pool
