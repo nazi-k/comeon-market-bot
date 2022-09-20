@@ -38,6 +38,7 @@ async def cart_answer(message: types.Message, session: AsyncSession, state: FSMC
 async def cb_cart(call: types.CallbackQuery, session: AsyncSession):
     cart: Cart = await Cart.get_filter_by(session, customer_id=call.message.chat.id, finish=False)
     await send_message_cart(call.message, cart, session, edit=True)
+    await call.answer()
 
 
 @dp.callback_query_handler(cb_clear_cart.filter(), state="*")
@@ -49,6 +50,7 @@ async def clear_cart(call: types.CallbackQuery, callback_data: dict, session: As
         await cart.clear(session)
         cart.message_id = new_message.message_id
         await session.commit()
+    await call.answer()
 
 
 @dp.callback_query_handler(cb_edit_cart_change_product_quantity.filter(), state="*")
@@ -65,6 +67,7 @@ async def edit_cart_change_product_quantity(call: types.CallbackQuery, callback_
             caption=await _make_caption_to_product_in_cart(product, cart_product.quantity, session),
             reply_markup=call.message.reply_markup
         )
+    await call.answer()
 
 
 @dp.callback_query_handler(cb_end_edit_cart.filter(), state="*")
@@ -72,6 +75,7 @@ async def end_edit_cart(call: types.CallbackQuery, callback_data: dict, session:
     cart_id = int(callback_data["cart_id"])
     cart: Cart = await Cart.get_filter_by(session, id=cart_id)
     await send_message_cart(call.message, cart, session, edit=True)
+    await call.answer()
 
 
 @dp.callback_query_handler(cb_edit_cart.filter(), state="*")
@@ -101,6 +105,7 @@ async def send_edit_cart_menu(call: types.CallbackQuery, callback_data: dict, se
         new_message = await call.message.answer("Кошик пустий")
         cart.message_id = new_message.message_id
         await session.commit()
+    await call.answer()
 
 
 @dp.callback_query_handler(cb_create_order.filter(), state="*")
@@ -108,6 +113,7 @@ async def delivery_info_start(call: types.CallbackQuery, callback_data: dict, st
     await CreateOrder.waiting_for_region.set()
     await call.message.answer("Вкажіть область доставки")
     await state.update_data(cart_id=int(callback_data["cart_id"]))
+    await call.answer()
 
 
 @dp.message_handler(state=CreateOrder.waiting_for_region)
@@ -188,6 +194,7 @@ async def confirm_order(call: types.CallbackQuery, callback_data: dict, session:
         else:
             await call.message.edit_text("Вибачте, хтось щойно купив залишки вашого замовлення, "
                                          "поки ви були зайняті заповненням даних на доставку.")
+    await call.answer()
 
 
 @dp.callback_query_handler(cb_cancel_order.filter(), state="*")
@@ -196,6 +203,7 @@ async def cancel_order(call: types.CallbackQuery, state: FSMContext):
     await call.message.delete()
     await call.message.answer("Ми перемістили вас у головне меню, але ваш кошик на місці",
                               reply_markup=make_menu_keyboard())
+    await call.answer()
 
 
 async def _make_caption_to_product_in_cart(product_modification: ProductModification,

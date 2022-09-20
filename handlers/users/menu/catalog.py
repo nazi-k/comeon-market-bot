@@ -40,6 +40,7 @@ async def catalog_category(call: types.CallbackQuery, callback_data: dict, sessi
         ),
         reply_markup=await make_catalog_keyboard(category, session)
     )
+    await call.answer()
 
 
 @dp.callback_query_handler(cb_product.filter(), state="*")
@@ -60,6 +61,7 @@ async def catalog_product(call: types.CallbackQuery, callback_data: dict, sessio
             session=session
         )
     )
+    await call.answer()
 
 
 @dp.callback_query_handler(cb_buy_product.filter(), state="*")
@@ -88,6 +90,7 @@ async def catalog_buy_product(call: types.CallbackQuery, callback_data: dict, se
             session=session
         )
     )
+    await call.answer()
 
 
 @dp.callback_query_handler(cb_buy_change_product_quantity.filter(), state="*")
@@ -108,6 +111,7 @@ async def catalog_change_product_quantity(call: types.CallbackQuery, callback_da
             )
         )
         await _update_message_cart(call.bot, cart, session)
+    await call.answer()
 
 
 async def _update_message_cart(bot: Bot, cart: Cart, session: AsyncSession):

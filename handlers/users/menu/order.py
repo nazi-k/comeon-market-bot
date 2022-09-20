@@ -31,6 +31,7 @@ async def show_order(call: types.CallbackQuery, callback_data: dict, session: As
         f"{await cart.get_cart_text(session)}\n{order.get_data_to_send_text()}",
         reply_markup=make_copy_cart_keyboard(cart)
     )
+    await call.answer()
 
 
 @dp.callback_query_handler(cb_copy_cart.filter(), state="*")
@@ -39,3 +40,4 @@ async def copy_cart(call: types.CallbackQuery, callback_data: dict, session: Asy
     cart_who_copy = await Cart.get_filter_by(session, id=int(callback_data["cart_id"]))
     await cart.set_copy(session, cart_who_copy)
     await send_message_cart(call.message, cart, session)
+    await call.answer()
