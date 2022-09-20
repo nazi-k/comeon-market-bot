@@ -1,5 +1,10 @@
 from aiogram.dispatcher.middlewares import LifetimeControllerMiddleware
 
+import ssl
+ssl_object = ssl.create_default_context()
+ssl_object.check_hostname = False
+ssl_object.verify_mode = ssl.CERT_NONE
+
 
 class DbSessionMiddleware(LifetimeControllerMiddleware):
     skip_patterns = ["error", "update"]
@@ -9,7 +14,7 @@ class DbSessionMiddleware(LifetimeControllerMiddleware):
         self.session_pool = session_pool
 
     async def pre_process(self, obj, data, *args):
-        session = self.session_pool()
+        session = self.session_pool(ssl=ssl_object)
         data["session"] = session
 
     async def post_process(self, obj, data, *args):

@@ -12,7 +12,12 @@ async def on_startup(dispatcher):
     async with engine.begin() as conn:
         await conn.run_sync(metadata.create_all)
 
-    await dp.bot.set_webhook(WEBHOOK_URL, drop_pending_updates=True)
+    await dispatcher.bot.set_webhook(WEBHOOK_URL, drop_pending_updates=True)
+
+
+async def on_shutdown(dispatcher):
+    await dispatcher.storage.close()
+    await dispatcher.storage.wait_closed()
 
 
 if __name__ == '__main__':
@@ -21,6 +26,7 @@ if __name__ == '__main__':
         webhook_path=WEBHOOK_PATH,
         skip_updates=True,
         on_startup=on_startup,
+        on_shutdown=on_shutdown,
         host=WEBAPP_HOST,
         port=WEBAPP_PORT,
     )

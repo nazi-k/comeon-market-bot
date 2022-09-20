@@ -1,50 +1,80 @@
-from datetime import date
-from typing import Optional
+from datetime import datetime
+from typing import Optional, Union
 
-from aiogram.types import LabeledPrice
-from sqlalchemy import Column, ForeignKey, BigInteger, Text, Integer, Date, Boolean, SmallInteger, text
+from sqlalchemy import Column, ForeignKey, BigInteger, Text, Integer, Boolean, SmallInteger, text, Unicode, \
+    UnicodeText, TIMESTAMP,  delete
+from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.sql import func
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, and_
+from sqlalchemy.orm import relationship, selectinload
 
+from data.config import DEFAULT_PHOTO_URL, DEFAULT_PHOTO_FILE_ID
 from db.base import Base
 
-from data.config import PROVIDER_TOKEN, DEFAULT_PRODUCT_PHOTO_FILE_ID, DEFAULT_PRODUCT_PHOTO_URL
-from db.mixin import GetFilterByMixin, GetOrCreateMixin
+from db.mixin import GetFilterByMixin, GetOrCreateMixin, GetPhotoMixin
 
-from exception import NotEnoughQuantity, InvoicePayloadToLong
-
-MAX_LEN_DESCRIPTION: int = 255
+from exception import NotEnoughQuantity
 
 
 class Product(Base, GetFilterByMixin):
     __tablename__ = "product"
 
     id = Column(Integer, primary_key=True)
-    price = Column(Integer, nullable=False)
     name = Column(Text, nullable=False)
+    category_id = Column(Integer, ForeignKey("category.id"), nullable=False)
+    product_modifications = relationship("ProductModification", order_by="ProductModification.id")
+
+    @classmethod
+    async def get_filter_by(cls, session: AsyncSession, **kwargs):
+        instance_result = await session.execute(
+            select(cls)
+            .where(and_(*(getattr(cls, column_name) == kwargs[column_name] for column_name in kwargs)))
+            .options(selectinload(cls.product_modifications))
+
+        )
+        return instance_result.scalars().first()
+
+    @property
+    def indexes_and_product_modifications_with_positive_quantity(self) -> \
+            Union[tuple[dict[str, Union[int, 'ProductModification']], ...], tuple]:
+        return tuple(
+            dict(index=index, product_modification=product_modification)
+            for (index, product_modification) in enumerate(self.product_modifications)
+            if product_modification.quantity > 0
+        )
+
+
+class ProductModification(Base, GetFilterByMixin, GetPhotoMixin):
+    __tablename__ = "product_modification"
+
+    id = Column(Integer, primary_key=True)
+    product_id = Column(ForeignKey("product.id", ondelete='CASCADE'))
+    price = Column(Integer, nullable=False)
     quantity = Column(Integer, nullable=False)
-    product_folder_id = Column(Integer, ForeignKey("product_folder.id"), nullable=False)
+    description = Column(Text, nullable=False)
 
-    async def get_url_photo(self, session: AsyncSession) -> str:
-        url_photo_result = await session.execute(
-            select(ProductPhoto.url).where(ProductPhoto.product_id == self.id)
-        )
-        url_photo = url_photo_result.scalars().first()
-        if url_photo:
-            return url_photo
-        else:
-            return DEFAULT_PRODUCT_PHOTO_URL
+    modifications = relationship(
+        "Modification", collection_class=attribute_mapped_collection("key")
+    )
 
-    async def get_photo_file_id(self, session: AsyncSession) -> str:
-        photo_file_id_result = await session.execute(
-            select(ProductPhoto.url).where(ProductPhoto.product_id == self.id)
+    async def get_modifications_value(self, session: AsyncSession) -> list[str]:
+        children_result = await session.execute(
+            select(Modification.value).where(Modification.product_modification_id == self.id)
         )
-        photo_file_id = photo_file_id_result.scalars().first()
-        if photo_file_id:
-            return photo_file_id
-        else:
-            return DEFAULT_PRODUCT_PHOTO_FILE_ID
+        return children_result.scalars().all()
+
+    async def get_name_with_value(self, session: AsyncSession) -> str:
+        query = "select (p.name || ' ' || rez.modifications) as name_with_value " \
+                "from (select array_to_string(ARRAY_AGG(m.value), ' ') as modifications, " \
+                "      MAX(pm.product_id) as product_id " \
+                "      from product_modification pm " \
+                "      left join modification m on pm.id = m.product_modification_id " \
+                f"     where pm.id = {self.id} " \
+                "      group by m.product_modification_id) rez " \
+                "left join product p on p.id = rez.product_id"
+        instance_result = await session.execute(text(query))
+        return instance_result.scalars().first()
 
     def buy(self, quantity: int):
         if self.quantity < quantity:
@@ -52,20 +82,38 @@ class Product(Base, GetFilterByMixin):
         self.quantity = self.quantity - quantity
 
 
-class ProductPhoto(Base):
-    __tablename__ = "product_photo"
+class Modification(Base):
+    __tablename__ = "modification"
+
+    product_modification_id = Column(ForeignKey("product_modification.id"), primary_key=True)
+    key = Column(Unicode(64), primary_key=True)
+    value = Column(UnicodeText, nullable=False)
+
+
+class ProductModificationPhoto(Base):
+    __tablename__ = "product_modification_photo"
+
+    file_id = Column(Text, nullable=False)
+    url = Column(Text, nullable=True)
+    product_modification_id = Column(Integer,
+                                     ForeignKey("product_modification.id", ondelete='CASCADE'),
+                                     primary_key=True)
+
+
+class CategoryPhoto(Base):
+    __tablename__ = "category_photo"
 
     file_id = Column(Text, primary_key=True)
-    url = Column(Text, nullable=False)
-    product_id = Column(Integer, ForeignKey("product.id", ondelete='CASCADE'), nullable=False)
+    url = Column(Text, nullable=True)
+    category_id = Column(Integer, ForeignKey("category.id", ondelete='CASCADE'), nullable=False)
 
 
-class ProductFolder(Base, GetFilterByMixin):
-    __tablename__ = "product_folder"
+class Category(Base, GetFilterByMixin, GetPhotoMixin):
+    __tablename__ = "category"
 
     id = Column(Integer, primary_key=True)
     name = Column(Text, nullable=False)
-    parent_id = Column(Integer, ForeignKey("product_folder.id"), nullable=True)
+    parent_id = Column(Integer, ForeignKey("category.id"), nullable=True)
 
     async def get_children(self, session: AsyncSession) -> list:
         children_result = await session.execute(
@@ -75,23 +123,23 @@ class ProductFolder(Base, GetFilterByMixin):
 
     async def get_products(self, session: AsyncSession) -> list[Product]:
         products_result = await session.execute(
-            select(Product).where((Product.product_folder_id == self.id) & (Product.quantity > 0))
+            select(Product).where(Product.category_id == self.id).options(selectinload(Product.product_modifications))
         )
         return products_result.scalars().all()
 
     @classmethod
-    async def get_root_product_folder(cls, session: AsyncSession):
-        root_product_folder_result = await session.execute(
+    async def get_root(cls, session: AsyncSession):
+        root_category_result = await session.execute(
             select(cls).where(cls.parent_id.is_(None))
         )
-        return root_product_folder_result.scalars().first()
+        return root_category_result.scalars().first()
 
 
-class CartProduct(Base, GetFilterByMixin):
-    __tablename__ = "cart_product"
+class CartProductModification(Base, GetFilterByMixin):
+    __tablename__ = "cart_product_modification"
 
     cart_id = Column(Integer, ForeignKey('cart.id', ondelete='CASCADE'), primary_key=True)
-    product_id = Column(Integer, ForeignKey("product.id", ondelete='CASCADE'), primary_key=True)
+    product_modification_id = Column(ForeignKey("product_modification.id", ondelete='CASCADE'), primary_key=True)
     quantity = Column(SmallInteger, nullable=False, server_default=text("1"))
 
     async def change_quantity(self, session: AsyncSession, change_on: int) -> None:
@@ -99,9 +147,9 @@ class CartProduct(Base, GetFilterByMixin):
         if self.quantity <= 0:
             await session.delete(self)
 
-    async def get_product(self, session: AsyncSession) -> Product:
+    async def get_product_modification(self, session: AsyncSession) -> ProductModification:
         products_result = await session.execute(
-            select(Product).where(Product.id == self.product_id)
+            select(ProductModification).where(ProductModification.id == self.product_modification_id)
         )
         return products_result.scalars().first()
 
@@ -117,90 +165,107 @@ class Order(Base, GetFilterByMixin):
     full_name = Column(Text, nullable=False)
     phone_number = Column(Text, nullable=False)
     total_amount = Column(Integer, nullable=False)
-    raw_payload = Column(Text, nullable=False)
-    telegram_payment_charge_id = Column(Text, nullable=True)
-    provider_payment_charge_id = Column(Text, nullable=True)
 
     def get_data_to_send_text(self) -> str:
         data_to_send_text = f"Область: {self.region}\n" \
                             f"Місто: {self.city}\n" \
-                            f"Відділення Нової Пошти: {self.nova_poshta_number}\n"
+                            f"Відділення Нової Пошти: {self.nova_poshta_number}\n" \
+                            f"Одержувач: {self.full_name}\n" \
+                            f"Номер одержувача: {self.phone_number}\n"
         return data_to_send_text
-
-    async def payment(self, session: AsyncSession) -> bool:
-        cart: Cart = await Cart.get_filter_by(session, id=self.cart_id, finish=False)
-        if not cart:
-            return False
-        if self.total_amount != (await cart.get_amount(session) * 100):
-            return False
-        cart_products = await cart.get_sorted_cart_products(session)
-        for cart_product in cart_products:
-            product = await Product.get_filter_by(session, id=cart_product.product_id)
-            product.buy(cart_product.quantity)
-        cart.date = date.today()
-        cart.finish = True
-        return True
 
 
 class Cart(Base, GetOrCreateMixin):
     __tablename__ = "cart"
 
     id = Column(Integer, primary_key=True)
-    date = Column(Date, nullable=False, server_default=func.now())
+    date_time = Column(TIMESTAMP, nullable=False, server_default=func.now())
     customer_id = Column(BigInteger, ForeignKey("customer.telegram_id"), nullable=False)
+    message_id = Column(Integer, nullable=True)
     finish = Column(Boolean, nullable=False, server_default=text("False"))
 
-    async def get_quantity_product_in_cart(self, product: Product, session: AsyncSession) -> int:
-        cart_product_result = await session.execute(
-            select(CartProduct).where((CartProduct.cart_id == self.id) & (CartProduct.product_id == product.id))
+    async def clear(self, session: AsyncSession, commit: bool = False):
+        stmt = (
+            delete(CartProductModification).
+            where(CartProductModification.cart_id == self.id)
         )
-        cart_product: CartProduct = cart_product_result.scalars().first()
-        if cart_product:
-            return cart_product.quantity
+        await session.execute(stmt)
+        if commit:
+            await session.commit()
+
+    async def get_quantity_product_in_cart(self, product_modification: ProductModification, session: AsyncSession) \
+            -> int:
+        cart_product_quantity_result = await session.execute(
+            select(CartProductModification.quantity)
+            .where((CartProductModification.cart_id == self.id) &
+                   (CartProductModification.product_modification_id == product_modification.id))
+        )
+        cart_product_quantity: CartProductModification = cart_product_quantity_result.scalars().first()
+        if cart_product_quantity:
+            return cart_product_quantity
         else:
             return 0
 
     async def get_amount(self, session: AsyncSession) -> int:
-        amount_query = f"select coalesce(SUM(cp.quantity * p.price), 0) AS product_sum " \
-                       f"from cart_product cp left join product p on p.id = cp.product_id WHERE cp.cart_id = {self.id}"
+        amount_query = f"select coalesce(SUM(cpm.quantity * pm.price), 0) AS product_sum " \
+                       f"from cart_product_modification cpm left join " \
+                       f"product_modification pm on pm.id = cpm.product_modification_id WHERE cpm.cart_id = {self.id}"
         return next(await session.execute(text(amount_query)))[0]
 
-    async def add_product(self, session: AsyncSession, product: Product) -> CartProduct:
-        cart_product: CartProduct = await CartProduct.get_filter_by(session, cart_id=self.id, product_id=product.id)
-        if cart_product:
-            await cart_product.change_quantity(session, +1)
+    async def add_product_modification(self, session: AsyncSession, product_modification: ProductModification) \
+            -> CartProductModification:
+        cart_product_modification: CartProductModification = await CartProductModification.get_filter_by(
+            session, cart_id=self.id, product_modification_id=product_modification.id)
+        if cart_product_modification:
+            await cart_product_modification.change_quantity(session, +1)
         else:
-            cart_product = CartProduct(cart_id=self.id, product_id=product.id, quantity=1)
-            session.add(cart_product)
-        if product.quantity < cart_product.quantity:
+            cart_product_modification = CartProductModification(
+                cart_id=self.id,
+                product_modification_id=product_modification.id,
+                quantity=1
+            )
+            session.add(cart_product_modification)
+        if product_modification.quantity < cart_product_modification.quantity:
             raise NotEnoughQuantity
         await session.commit()
-        return cart_product
+        return cart_product_modification
 
-    async def sub_product(self, session: AsyncSession, product: Product) -> Optional[CartProduct]:
-        cart_product: CartProduct = await CartProduct.get_filter_by(session, cart_id=self.id, product_id=product.id)
-        if cart_product:
-            await cart_product.change_quantity(session, -1)
+    async def sub_product_modification(self, session: AsyncSession, product_modification: ProductModification) -> \
+            Optional[CartProductModification]:
+        cart_product_modification: CartProductModification = await CartProductModification.get_filter_by(
+            session, cart_id=self.id, product_modification_id=product_modification.id)
+        if cart_product_modification:
+            await cart_product_modification.change_quantity(session, -1)
             await session.commit()
-            return cart_product
+            return cart_product_modification
 
     async def get_cart_text(self, session: AsyncSession) -> Optional[str]:
-        query = f"select p.name, cp.quantity, p.price from cart_product cp " \
-                f"left join product p on p.id = cp.product_id WHERE cp.cart_id = {self.id}"
+        query = "select (p.name || ' ' || rez.modifications) as product_modification_name, rez.quantity, rez.price " \
+                "from (select MAX(pm.product_id) as product_id, " \
+                "      array_to_string(ARRAY_AGG(m.value), ' ') as modifications, " \
+                "      MAX(cpm.quantity) as quantity, MAX(pm.price) as price " \
+                "      from product_modification pm " \
+                "      left join modification m on pm.id = m.product_modification_id " \
+                "      left join cart_product_modification cpm on pm.id = cpm.product_modification_id " \
+                f"     where cpm.cart_id = {self.id} " \
+                "      group by m.product_modification_id) rez " \
+                "left join product p on rez.product_id = p.id"
         cart_text = ""
         amount = 0
-        for name, quantity, price in await session.execute(text(query)):
+        for product_modification_name, quantity, price in await session.execute(text(query)):
             amount += quantity * price
-            cart_text += f"\n{name}\n{quantity} шт. x {price}₴"
+            cart_text += f"\n{product_modification_name}\n{quantity} шт. x {price}₴"
         if cart_text:
-            cart_text = "Кошик\n\n-----" + cart_text + "\n-----\n" + f"\nРазом: {amount}₴"
+            cart_text = cart_text + "\n-----\n" + f"\nРазом: {amount}₴"
             return cart_text
         else:
             return None
 
-    async def get_sorted_cart_products(self, session: AsyncSession) -> list[Optional[CartProduct]]:
+    async def get_sorted_cart_products(self, session: AsyncSession) -> list[Optional[CartProductModification]]:
         sorted_cart_products_result = await session.execute(
-            select(CartProduct).where(CartProduct.cart_id == self.id).order_by(CartProduct.product_id)
+            select(CartProductModification)
+            .where(CartProductModification.cart_id == self.id)
+            .order_by(CartProductModification.product_modification_id)
         )
         cart_products = sorted_cart_products_result.scalars().all()
         return cart_products
@@ -213,57 +278,39 @@ class Cart(Base, GetOrCreateMixin):
         return order
 
     async def set_copy(self, session: AsyncSession, cart: 'Cart') -> None:
+        await self.clear(session)
         copy_cart_products = await cart.get_sorted_cart_products(session)
         for copy_cart_product in copy_cart_products:
-            await session.merge(CartProduct(cart_id=self.id,
-                                            product_id=copy_cart_product.product_id,
-                                            quantity=copy_cart_product.quantity))
-        await session.commit()
+            session.add(CartProductModification(cart_id=self.id,
+                                                product_modification_id=copy_cart_product.product_modification_id,
+                                                quantity=copy_cart_product.quantity))
+            await session.commit()
 
-    async def get_data_to_invoice(self,
-                                  region: str,
-                                  city: str,
-                                  nova_poshta_number: str,
-                                  session: AsyncSession, **kwargs) -> dict:
-        cart_products = await self.get_sorted_cart_products(session)
-        prices = []
-        product_name_and_quantity = []
-        for cart_product in cart_products:
-            product = await cart_product.get_product(session)
-            prices.append(
-                LabeledPrice(label=f"{product.name} "
-                                   f"{' x ' + str(cart_product.quantity) if cart_product.quantity > 1 else ''}",
-                             amount=(cart_product.quantity * product.price) * 100)
-            )
-            product_name_and_quantity.append(
-                product.name + ' x ' + str(cart_product.quantity) if cart_product.quantity > 1 else product.name
-            )
-        description = ', '.join(product_name_and_quantity)
-        if len(description) > MAX_LEN_DESCRIPTION:
-            description = description[:(MAX_LEN_DESCRIPTION - 3)] + '...'
-        payload = f"{self.id}:" \
-                  f"{region.replace(':', '{..}')}:" \
-                  f"{city.replace(':', '{..}')}:" \
-                  f"{nova_poshta_number.replace(':', '{..}')}"
-        if len(payload.encode('utf-8')) > 128:
-            raise InvoicePayloadToLong
-        data_to_invoice = {
-            "title": f"Замовлення #{self.id}",
-            "description": description,
-            "payload": payload,
-            "provider_token": PROVIDER_TOKEN,
-            "currency": "uah",
-            "prices": prices,
-            "need_name": True,
-            "need_phone_number": True,
-            "send_phone_number_to_provider": True
-        }
-        if len(cart_products) == 1:
-            product = await cart_products[0].get_product(session)
-            data_to_invoice["photo_url"] = await product.get_url_photo(session)
-        else:
-            data_to_invoice["photo_url"] = DEFAULT_PRODUCT_PHOTO_URL
-        return data_to_invoice
+    async def confirmation_buy(self, session: AsyncSession) -> bool:
+        try:
+            cart_products = await self.get_sorted_cart_products(session)
+            for cart_product in cart_products:
+                product_odification = await ProductModification.get_filter_by(
+                    session, id=cart_product.product_modification_id
+                )
+                product_odification.buy(cart_product.quantity)
+            self.date_time = datetime.now()
+            self.finish = True
+            return True
+        except NotEnoughQuantity:
+            return False
+
+    @property
+    def date(self) -> datetime.date:
+        return self.date_time.date()
+
+    @classmethod
+    def get_photo_url(cls) -> str:
+        return DEFAULT_PHOTO_URL[cls.__tablename__]
+
+    @classmethod
+    def get_photo_file_id(cls) -> str:
+        return DEFAULT_PHOTO_FILE_ID[cls.__tablename__]
 
 
 class Customer(Base, GetOrCreateMixin):

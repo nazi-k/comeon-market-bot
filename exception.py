@@ -1,6 +1,2 @@
 class NotEnoughQuantity(Exception):
-    pass
-
-
-class InvoicePayloadToLong(Exception):
-    pass
+    message = "Легше... В нас більше немає!"

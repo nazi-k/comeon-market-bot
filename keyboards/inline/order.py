@@ -28,3 +28,14 @@ def make_copy_cart_keyboard(cart: Cart) -> InlineKeyboardMarkup:
         )
     )
     return keyboard
+
+
+def make_customer_link(chat_url: str) -> InlineKeyboardMarkup:
+    keyboard = InlineKeyboardMarkup(row_width=1)
+    keyboard.add(
+        InlineKeyboardButton(
+            text="Замовник",
+            url=chat_url
+        )
+    )
+    return keyboard
