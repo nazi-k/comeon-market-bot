@@ -26,6 +26,8 @@ from .utils import change_product_quantity
 
 from loader import dp
 
+from exception import EditToEmptyCart
+
 
 @dp.message_handler(Text(equals="🛒 Кошик"), state="*")
 async def cart_answer(message: types.Message, session: AsyncSession, state: FSMContext):
@@ -37,8 +39,11 @@ async def cart_answer(message: types.Message, session: AsyncSession, state: FSMC
 @dp.callback_query_handler(cb_cart.filter(), state="*")
 async def cb_cart(call: types.CallbackQuery, session: AsyncSession):
     cart: Cart = await Cart.get_filter_by(session, customer_id=call.message.chat.id, finish=False)
-    await send_message_cart(call.message, cart, session, edit=True)
-    await call.answer()
+    try:
+        await send_message_cart(call.message, cart, session, edit=True)
+        await call.answer()
+    except EditToEmptyCart as e:
+        await call.answer(e.message, show_alert=True)
 
 
 @dp.callback_query_handler(cb_clear_cart.filter(), state="*")
@@ -230,7 +235,10 @@ async def notify_admin(cart: Cart, order: Order, chat_url: str, bot: Bot, sessio
         )
 
 
-async def send_message_cart(message: types.Message, cart: Cart, session: AsyncSession, edit: bool = False):
+async def send_message_cart(message: types.Message,
+                            cart: Cart, session: AsyncSession,
+                            edit: bool = False,
+                            is_raise_error: bool = False):
     if cart:
         if cart.message_id and not (cart.message_id == message.message_id):
             try:
@@ -257,6 +265,9 @@ async def send_message_cart(message: types.Message, cart: Cart, session: AsyncSe
             cart.message_id = new_cart_message.message_id
             await session.commit()
             return
+
+        elif edit and is_raise_error:
+            raise EditToEmptyCart
 
     await message.delete()
 
