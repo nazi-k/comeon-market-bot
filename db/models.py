@@ -249,7 +249,7 @@ class Cart(Base, GetOrCreateMixin):
                 "      left join cart_product_modification cpm on pm.id = cpm.product_modification_id " \
                 f"     where cpm.cart_id = {self.id} " \
                 "      group by m.product_modification_id) rez " \
-                "left join product p on rez.product_id = p.id" \
+                "left join product p on rez.product_id = p.id " \
                 "left join category c on p.category_id = c.id"
         cart_text = ""
         amount = 0
