@@ -34,8 +34,7 @@ async def catalog_category(call: types.CallbackQuery, callback_data: dict, sessi
     category: Category = await Category.get_filter_by(session, id=int(callback_data['id']))
     await call.message.edit_media(
         media=InputMediaPhoto(
-            await category.get_photo_file_id(session),
-            caption=category.name
+            await category.get_photo_file_id(session)
         ),
         reply_markup=await make_catalog_keyboard(category, session)
     )
