@@ -40,7 +40,7 @@ async def cart_answer(message: types.Message, session: AsyncSession, state: FSMC
 async def cb_cart(call: types.CallbackQuery, session: AsyncSession):
     cart: Cart = await Cart.get_filter_by(session, customer_id=call.message.chat.id, finish=False)
     try:
-        await send_message_cart(call.message, cart, session, edit=True)
+        await send_message_cart(call.message, cart, session, edit=True, is_raise_error=True)
         await call.answer()
     except EditToEmptyCart as e:
         await call.answer(e.message, show_alert=True)
