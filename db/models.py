@@ -240,7 +240,7 @@ class Cart(Base, GetOrCreateMixin):
             return cart_product_modification
 
     async def get_cart_text(self, session: AsyncSession) -> Optional[str]:
-        query = "select (p.name || ' ' || rez.modifications) as product_modification_name, rez.quantity, rez.price " \
+        query = "select (c.name || ' ' || p.name || ' ' || rez.modifications) as product_modification_name, rez.quantity, rez.price " \
                 "from (select MAX(pm.product_id) as product_id, " \
                 "      array_to_string(ARRAY_AGG(m.value), ' ') as modifications, " \
                 "      MAX(cpm.quantity) as quantity, MAX(pm.price) as price " \
@@ -249,7 +249,8 @@ class Cart(Base, GetOrCreateMixin):
                 "      left join cart_product_modification cpm on pm.id = cpm.product_modification_id " \
                 f"     where cpm.cart_id = {self.id} " \
                 "      group by m.product_modification_id) rez " \
-                "left join product p on rez.product_id = p.id"
+                "left join product p on rez.product_id = p.id" \
+                "left join category c on p.category_id = c.id"
         cart_text = ""
         amount = 0
         for product_modification_name, quantity, price in await session.execute(text(query)):

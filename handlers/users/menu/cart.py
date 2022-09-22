@@ -126,7 +126,7 @@ async def region_chosen(message: types.Message, state: FSMContext):
 @dp.message_handler(state=CreateOrder.waiting_for_city)
 async def city_chosen(message: types.Message, state: FSMContext):
     await CreateOrder.waiting_for_nova_poshta_number.set()
-    await message.answer("№ відділення Нової Пошти")
+    await message.answer("№ відділення Нової Пошти або № поштомата")
     await state.update_data(city=message.text)
 
 

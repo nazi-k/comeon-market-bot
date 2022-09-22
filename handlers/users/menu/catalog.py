@@ -24,7 +24,6 @@ async def catalog(message: types.Message, session: AsyncSession, state: FSMConte
     root_category: Category = await Category.get_root(session)
     await message.answer_photo(
         photo=await root_category.get_photo_file_id(session),
-        caption=root_category.name,
         reply_markup=await make_catalog_keyboard(root_category, session)
     )
     await message.delete()
@@ -111,6 +110,21 @@ async def catalog_change_product_quantity(call: types.CallbackQuery, callback_da
             )
         )
         await _update_message_cart(call.bot, cart, session)
+    await call.answer()
+
+
+@dp.callback_query_handler(cb_catalog.filter(), state="*")
+async def catalog_from_cart(call: types.CallbackQuery, callback_data: dict, session: AsyncSession):
+    cart: Cart = await Cart.get_filter_by(session, id=int(callback_data["cart_id"]))
+    root_category: Category = await Category.get_root(session)
+    await call.message.edit_media(
+        media=InputMediaPhoto(
+            await root_category.get_photo_file_id(session),
+        ),
+        reply_markup=await make_catalog_keyboard(root_category, session)
+    )
+    cart.message_id = None
+    await session.commit()
     await call.answer()
 
 

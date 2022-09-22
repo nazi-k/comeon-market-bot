@@ -1,6 +1,7 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from cbdata.cart import *
+from cbdata.catalog import cb_catalog
 
 from db.models import Cart, CartProductModification
 
@@ -23,6 +24,11 @@ def make_cart_keyboard(cart: Cart) -> InlineKeyboardMarkup:
             callback_data=cb_create_order.new(cart_id=cart.id)
         )
     ]
+    keyboard.add(InlineKeyboardButton(
+            text="💰Продовжити покупки",
+            callback_data=cb_catalog.new(cart_id=cart.id)
+        )
+    )
     keyboard.add(*buttons)
 
     return keyboard
