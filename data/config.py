@@ -1,6 +1,8 @@
 from environs import Env
 import os
 
+import re
+
 env = Env()
 env.read_env()
 
@@ -8,15 +10,9 @@ BOT_TOKEN = env.str("BOT_TOKEN")  # Забираем значение типа s
 ADMINS = env.list("ADMINS")  # Тут у нас будет список из админов
 MANAGER_USERNAME = env.str("manager_username")
 
-DB_HOST = env.str("postgres_host")
-DB_PORT = env.int("postgres_port")
-DB_NAME = env.str("postgres_name")
-DB_LOGIN = env.str("postgres_login")
-DB_PASSWORD = env.str("postgres_password")
+DATABASE_URL = os.environ.get('DATABASE_URL')
 
-REDIS_HOST = env.str("redis_host")
-REDIS_PORT = env.int("redis_port")
-REDIS_PASSWORD = env.str("redis_password")
+REDIS_PASSWORD, REDIS_HOST, REDIS_PORT = re.findall(r"//:(.+)@(.+):(\d+)", os.environ.get('REDIS_URL'))[0]
 
 HEROKU_APP_NAME = env.str("app_name")
 
