@@ -5,7 +5,7 @@ from aiogram.dispatcher.filters import Text
 from aiogram import types, Bot
 from aiogram.dispatcher import FSMContext
 from aiogram.types import InputMediaPhoto
-from aiogram.utils.exceptions import MessageToDeleteNotFound
+from aiogram.utils.exceptions import MessageToDeleteNotFound, MessageCantBeDeleted
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -244,6 +244,8 @@ async def send_message_cart(message: types.Message,
             try:
                 await message.bot.delete_message(cart.customer_id, cart.message_id)
             except MessageToDeleteNotFound:
+                pass
+            except MessageCantBeDeleted:
                 pass
         cart_text = await cart.get_cart_text(session)
         if cart_text:
