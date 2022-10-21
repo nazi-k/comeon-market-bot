@@ -21,7 +21,7 @@ async def make_catalog_keyboard(category: Category, session: AsyncSession) -> In
     for category_child in await category.get_children(session):
         min_product_price = await category_child.get_min_product_price(session)
         buttons.append(InlineKeyboardButton(
-            text=category_child.name + (f" Від {min_product_price}₴" if min_product_price else "")
+            text=category_child.name + f" Від {min_product_price}₴" if min_product_price else category_child.name,
             callback_data=cb_category.new(id=category_child.id)
         ))
     for product in await category.get_products(session):
