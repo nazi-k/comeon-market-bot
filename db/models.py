@@ -134,7 +134,10 @@ class Category(Base, GetFilterByMixin, GetPhotoMixin):
 
     async def get_min_product_price(self, session: AsyncSession) -> list[Product]:
         products = await self.get_products(session)
-        return min((product.get_min_product_modification_price() for product in products))
+        if products:
+            return min((product.get_min_product_modification_price() for product in products))
+        else:
+            return None
     
     @classmethod
     async def get_root(cls, session: AsyncSession):
