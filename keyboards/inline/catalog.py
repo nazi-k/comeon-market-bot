@@ -20,7 +20,7 @@ async def make_catalog_keyboard(category: Category, session: AsyncSession) -> In
     buttons = []
     for category_child in await category.get_children(session):
         buttons.append(InlineKeyboardButton(
-            text=category_child.name,
+            text=f"{category_child.name} Від {await category_child.get_min_product_price(session)}₴",
             callback_data=cb_category.new(id=category_child.id)
         ))
     for product in await category.get_products(session):
@@ -28,7 +28,7 @@ async def make_catalog_keyboard(category: Category, session: AsyncSession) -> In
         if indexes_and_product_modification:  # Якщо є хоч 1 модифікація з кількість > 0
             first_index_with_positive_quantity = indexes_and_product_modification[0]['index']
             buttons.append(InlineKeyboardButton(
-                text=f"{product.name}",
+                text=f"{product.name} Вiд{product.get_min_product_modification_price()}₴",
                 callback_data=cb_product.new(
                     id=product.id,
                     selected_index_product_modifications=first_index_with_positive_quantity
