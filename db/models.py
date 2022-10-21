@@ -44,6 +44,11 @@ class Product(Base, GetFilterByMixin):
             if product_modification.quantity > 0
         )
 
+    def get_min_product_modification_price(self) -> int:
+        return min(*(indexes_and_product_modification['product_modification'].price
+                     for indexes_and_product_modification
+                     in self.indexes_and_product_modifications_with_positive_quantity))
+
 
 class ProductModification(Base, GetFilterByMixin, GetPhotoMixin):
     __tablename__ = "product_modification"
@@ -115,7 +120,7 @@ class Category(Base, GetFilterByMixin, GetPhotoMixin):
     name = Column(Text, nullable=False)
     parent_id = Column(Integer, ForeignKey("category.id"), nullable=True)
 
-    async def get_children(self, session: AsyncSession) -> list:
+    async def get_children(self, session: AsyncSession) -> list['Category']:
         children_result = await session.execute(
             select(self.__class__).where(self.__class__.parent_id == self.id)
         )
@@ -127,6 +132,10 @@ class Category(Base, GetFilterByMixin, GetPhotoMixin):
         )
         return products_result.scalars().all()
 
+    async def get_min_product_price(self, session: AsyncSession) -> list[Product]:
+        products = await self.get_products(session)
+        return min(*(product.get_min_product_modification_price() for product in products))
+    
     @classmethod
     async def get_root(cls, session: AsyncSession):
         root_category_result = await session.execute(
