@@ -45,9 +45,9 @@ class Product(Base, GetFilterByMixin):
         )
 
     def get_min_product_modification_price(self) -> int:
-        return min(*(indexes_and_product_modification['product_modification'].price
-                     for indexes_and_product_modification
-                     in self.indexes_and_product_modifications_with_positive_quantity))
+        return min((indexes_and_product_modification['product_modification'].price
+                    for indexes_and_product_modification
+                    in self.indexes_and_product_modifications_with_positive_quantity))
 
 
 class ProductModification(Base, GetFilterByMixin, GetPhotoMixin):
@@ -134,7 +134,7 @@ class Category(Base, GetFilterByMixin, GetPhotoMixin):
 
     async def get_min_product_price(self, session: AsyncSession) -> list[Product]:
         products = await self.get_products(session)
-        return min(*(product.get_min_product_modification_price() for product in products))
+        return min((product.get_min_product_modification_price() for product in products))
     
     @classmethod
     async def get_root(cls, session: AsyncSession):
